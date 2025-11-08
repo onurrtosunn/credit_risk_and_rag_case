@@ -1,12 +1,3 @@
-"""
-Data Cleaning Module
-This module handles all data cleaning operations including:
-- Removing data leakage variables
-- Handling missing values
-- Data type conversions
-- Business logic constraints
-"""
-
 import pandas as pd
 import numpy as np
 import warnings
@@ -31,8 +22,9 @@ EMPLOYMENT_LENGTH_MAP = {
 
 
 def _apply_business_constraints(X: pd.DataFrame) -> pd.DataFrame:
-    """Apply business logic constraints to ensure data consistency."""
-    
+    """
+    Apply business logic constraints to ensure data consistency.
+    """
     if 'loan_amnt' in X.columns and 'funded_amnt' in X.columns:
         count = (X['funded_amnt'] > X['loan_amnt']).sum()
         if count > 0:
@@ -57,7 +49,7 @@ def _apply_business_constraints(X: pd.DataFrame) -> pd.DataFrame:
             print(f"   [Constraint] Corrected {count} rows where 'last_pymnt_amnt > total_pymnt'")
             X['last_pymnt_amnt'] = np.minimum(X['total_pymnt'], X['last_pymnt_amnt'])
     
-    print("   ✓ Business logic constraints applied")
+    print("Business logic constraints applied")
     return X
 
 
@@ -72,7 +64,6 @@ def _clean_emp_length(X: pd.DataFrame) -> pd.DataFrame:
     X['emp_length'] = X['emp_length'].map(EMPLOYMENT_LENGTH_MAP)
     
     return X
-
 
 def clean_data(
     df: pd.DataFrame,
@@ -93,8 +84,8 @@ def clean_data(
     removed_columns = []
     
     print("\n1. Removing ID columns...")
-    id_cols = [col for col in config_module.COLUMNS_TO_DROP['id_columns'] 
-               if col in X.columns]
+    id_cols = [col for col in config_module.COLUMNS_TO_DROP['id_columns'] if col in X.columns]
+    
     if id_cols:
         X = X.drop(columns=id_cols)
         removed_columns.extend(id_cols)
@@ -142,8 +133,8 @@ def clean_data(
 def get_missing_value_summary(df: pd.DataFrame) -> pd.DataFrame:
     """
     Get summary of missing values in the dataset.
-
     """
+
     missing_summary = pd.DataFrame({
         'Column': df.columns,
         'Missing_Count': df.isnull().sum().values,
@@ -168,5 +159,4 @@ def check_data_quality(df: pd.DataFrame) -> dict:
         'missing_by_column': get_missing_value_summary(df)
     }
     return quality_report
-
 

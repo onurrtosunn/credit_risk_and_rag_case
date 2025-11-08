@@ -24,16 +24,6 @@ warnings.filterwarnings('ignore')
 def load_model(model_path: str) -> object:
     """
     Load a trained model from disk.
-    
-    Parameters:
-    -----------
-    model_path : str
-        Path to the model file
-    
-    Returns:
-    --------
-    object
-        Loaded model
     """
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model file not found: {model_path}")
@@ -44,53 +34,25 @@ def load_model(model_path: str) -> object:
     return model
 
 
-def evaluate_model(
-    model: object,
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    model_name: str = "Model"
-) -> Dict:
+def evaluate_model(model: object, X_test: pd.DataFrame, y_test: pd.Series, model_name: str = "Model") -> Dict:
     """
     Evaluate a model on test data.
-    
-    Parameters:
-    -----------
-    model : object
-        Trained model
-    X_test : pd.DataFrame
-        Test features
-    y_test : pd.Series
-        Test target
-    model_name : str
-        Name of the model
-    
-    Returns:
-    --------
-    dict
-        Dictionary with evaluation metrics and predictions
     """
     print("=" * 80)
     print(f"EVALUATING {model_name.upper()} ON TEST SET")
     print("=" * 80)
     
-    # Make predictions
     y_pred = model.predict(X_test)
     y_pred_proba = model.predict_proba(X_test)[:, 1]
     
-    # Calculate metrics
     roc_auc = roc_auc_score(y_test, y_pred_proba)
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     
-    # Classification report
     class_report = classification_report(y_test, y_pred)
-    
-    # Confusion matrix
     conf_matrix = confusion_matrix(y_test, y_pred)
-    
-    # ROC curve
     fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
     
     evaluation_results = {
@@ -107,7 +69,6 @@ def evaluate_model(
         'roc_curve': (fpr, tpr, thresholds)
     }
     
-    # Print results
     print(f"\nROC-AUC Score: {roc_auc:.4f}")
     print(f"Accuracy: {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
@@ -116,37 +77,14 @@ def evaluate_model(
     
     print("\nClassification Report:")
     print(class_report)
-    
     print("\nConfusion Matrix:")
     print(conf_matrix)
-    
     return evaluation_results
 
 
-def evaluate_all_models(
-    X_test: pd.DataFrame,
-    y_test: pd.Series,
-    config_module=None,
-    model_paths: Optional[Dict[str, str]] = None
-) -> Dict[str, Dict]:
+def evaluate_all_models(X_test: pd.DataFrame, y_test: pd.Series, config_module=None, model_paths: Optional[Dict[str, str]] = None) -> Dict[str, Dict]:
     """
     Evaluate all models on test data.
-    
-    Parameters:
-    -----------
-    X_test : pd.DataFrame
-        Test features
-    y_test : pd.Series
-        Test target
-    config_module : module
-        Configuration module (default: config)
-    model_paths : dict, optional
-        Dictionary with model names and paths (default: from config)
-    
-    Returns:
-    --------
-    dict
-        Dictionary with evaluation results for each model
     """
     if config_module is None:
         config_module = config
@@ -158,10 +96,7 @@ def evaluate_all_models(
     
     for model_name, model_path in model_paths.items():
         try:
-            # Load model
             model = load_model(model_path)
-            
-            # Evaluate model
             results = evaluate_model(model, X_test, y_test, model_name)
             evaluation_results[model_name] = results
             
@@ -171,20 +106,9 @@ def evaluate_all_models(
     
     return evaluation_results
 
-
 def compare_models(evaluation_results: Dict[str, Dict]) -> pd.DataFrame:
     """
     Compare all models based on evaluation metrics.
-    
-    Parameters:
-    -----------
-    evaluation_results : dict
-        Dictionary with evaluation results for each model
-    
-    Returns:
-    --------
-    pd.DataFrame
-        Comparison dataframe
     """
     comparison_data = []
     
@@ -200,25 +124,12 @@ def compare_models(evaluation_results: Dict[str, Dict]) -> pd.DataFrame:
     
     comparison_df = pd.DataFrame(comparison_data)
     comparison_df = comparison_df.sort_values('ROC-AUC', ascending=False)
-    
     return comparison_df
 
 
 def get_best_model(evaluation_results: Dict[str, Dict], metric: str = 'roc_auc') -> Tuple[str, Dict]:
     """
     Get the best model based on a metric.
-    
-    Parameters:
-    -----------
-    evaluation_results : dict
-        Dictionary with evaluation results for each model
-    metric : str
-        Metric to use for comparison (default: 'roc_auc')
-    
-    Returns:
-    --------
-    tuple
-        (best_model_name, best_model_results)
     """
     best_model_name = None
     best_score = -np.inf
@@ -233,16 +144,4 @@ def get_best_model(evaluation_results: Dict[str, Dict], metric: str = 'roc_auc')
         raise ValueError("No models found in evaluation results")
     
     return best_model_name, evaluation_results[best_model_name]
-
-
-if __name__ == "__main__":
-    print("Model Testing/Evaluation Module")
-    print("=" * 80)
-    print("\nThis module provides functions for model evaluation:")
-    print("  - load_model(): Load a trained model from disk")
-    print("  - evaluate_model(): Evaluate a single model")
-    print("  - evaluate_all_models(): Evaluate all models")
-    print("  - compare_models(): Compare all models")
-    print("  - get_best_model(): Get the best model based on a metric")
-    print("\nImport this module in your scripts to use these functions.")
 

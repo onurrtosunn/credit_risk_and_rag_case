@@ -7,13 +7,14 @@ This module provides comprehensive EDA functions including:
 - Outlier detection
 """
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import warnings
-from typing import Optional, Dict, List
+import os
 import config
+import warnings
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from typing import Optional, Dict, List
 
 warnings.filterwarnings('ignore')
 sns.set_style("whitegrid")
@@ -23,18 +24,6 @@ plt.rcParams['figure.figsize'] = (12, 6)
 def get_dataset_overview(df: pd.DataFrame, target_column: str = 'default') -> dict:
     """
     Get overview of the dataset.
-    
-    Parameters:
-    -----------
-    df : pd.DataFrame
-        Dataset
-    target_column : str
-        Name of the target column
-    
-    Returns:
-    --------
-    dict
-        Dataset overview statistics
     """
     overview = {
         'total_records': len(df),
@@ -47,27 +36,9 @@ def get_dataset_overview(df: pd.DataFrame, target_column: str = 'default') -> di
     return overview
 
 
-def analyze_numerical_features_by_target(
-    df: pd.DataFrame,
-    target_column: str = 'default',
-    numeric_features: Optional[List[str]] = None
-) -> pd.DataFrame:
+def analyze_numerical_features_by_target(df: pd.DataFrame, target_column: str = 'default', numeric_features: Optional[List[str]] = None) -> pd.DataFrame:
     """
     Analyze numerical features by target status.
-    
-    Parameters:
-    -----------
-    df : pd.DataFrame
-        Dataset
-    target_column : str
-        Name of the target column
-    numeric_features : list, optional
-        List of numerical features to analyze
-    
-    Returns:
-    --------
-    pd.DataFrame
-        Statistical summary by target status
     """
     if numeric_features is None:
         numeric_features = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -258,23 +229,17 @@ def get_eda_summary(
     print(f"  - Default rate: {overview['default_rate']:.2f}%")
     print(f"  - Non-default rate: {overview['non_default_rate']:.2f}%")
     
-    # Get all numerical features (including engineered ones)
     all_numeric_features = df.select_dtypes(include=[np.number]).columns.tolist()
     if target_column in all_numeric_features:
         all_numeric_features.remove(target_column)
     
-    # Numerical features analysis - use all numeric features
     numeric_stats = analyze_numerical_features_by_target(df, target_column, all_numeric_features)
-    
-    # Categorical features analysis
     categorical_features = (
         config_module.FEATURE_LISTS.get('ordinal_features', []) +
         config_module.FEATURE_LISTS.get('low_cardinality_nominal', []) +
         config_module.FEATURE_LISTS.get('high_cardinality_nominal', [])
     )
     categorical_stats = analyze_categorical_features_by_target(df, target_column, categorical_features)
-    
-    # Correlation matrix - use all numeric features
     corr_matrix = calculate_correlation_matrix(df, target_column, all_numeric_features)
     
     eda_summary = {
@@ -289,23 +254,9 @@ def get_eda_summary(
     
     return eda_summary
 
-
-def visualize_feature_distributions_bar(
-    df: pd.DataFrame,
-    target_column: str = 'default',
-    save_path: Optional[str] = None
-) -> None:
+def visualize_feature_distributions_bar(df: pd.DataFrame, target_column: str = 'default', save_path: Optional[str] = None) -> None:
     """
     Visualize feature distributions using bar charts comparing default vs non-default.
-    
-    Parameters:
-    -----------
-    df : pd.DataFrame
-        Dataset with features and target
-    target_column : str
-        Name of the target column
-    save_path : str, optional
-        Path to save plots
     """
     import os
     
@@ -341,8 +292,7 @@ def visualize_feature_distributions_bar(
         bins = np.linspace(
             min(non_default_data.min(), default_data.min()),
             max(non_default_data.max(), default_data.max()),
-            20
-        )
+            20)
         
         non_default_counts, _ = np.histogram(non_default_data, bins=bins)
         default_counts, _ = np.histogram(default_data, bins=bins)
@@ -374,35 +324,14 @@ def visualize_feature_distributions_bar(
     plt.show()
 
 
-def visualize_correlation_heatmap(
-    df: pd.DataFrame,
-    target_column: str = 'default',
-    save_path: Optional[str] = None
-) -> pd.DataFrame:
+def visualize_correlation_heatmap(df: pd.DataFrame, target_column: str = 'default', save_path: Optional[str] = None) -> pd.DataFrame:
     """
     Visualize correlation heatmap for all features.
-    
-    Parameters:
-    -----------
-    df : pd.DataFrame
-        Dataset with features and target
-    target_column : str
-        Name of the target column
-    save_path : str, optional
-        Path to save plots
-    
-    Returns:
-    --------
-    pd.DataFrame
-        Correlation matrix
     """
-    import os
-    
     if save_path is None:
         save_path = 'plots/'
     
     os.makedirs(save_path, exist_ok=True)
-    
     numeric_features = df.select_dtypes(include=[np.number]).columns.tolist()
     if target_column in numeric_features:
         numeric_features.remove(target_column)
@@ -429,26 +358,10 @@ def visualize_correlation_heatmap(
     
     return corr_matrix
 
-
-def visualize_feature_distributions_violin(
-    df: pd.DataFrame,
-    target_column: str = 'default',
-    save_path: Optional[str] = None
-) -> None:
+def visualize_feature_distributions_violin(df: pd.DataFrame, target_column: str = 'default', save_path: Optional[str] = None) -> None:
     """
     Visualize feature distributions using violin plots.
-    
-    Parameters:
-    -----------
-    df : pd.DataFrame
-        Dataset with features and target
-    target_column : str
-        Name of the target column
-    save_path : str, optional
-        Path to save plots
     """
-    import os
-    
     if save_path is None:
         save_path = 'plots/'
     
@@ -508,22 +421,9 @@ def visualize_feature_distributions_violin(
     plt.show()
 
 
-def create_all_feature_visualizations(
-    df: pd.DataFrame,
-    target_column: str = 'default',
-    save_path: Optional[str] = None
-) -> None:
+def create_all_feature_visualizations(df: pd.DataFrame, target_column: str = 'default', save_path: Optional[str] = None) -> None:
     """
     Create all feature visualizations: bar charts, heatmap, and violin plots.
-    
-    Parameters:
-    -----------
-    df : pd.DataFrame
-        Dataset with features and target
-    target_column : str
-        Name of the target column
-    save_path : str, optional
-        Path to save plots
     """
     numeric_features = df.select_dtypes(include=[np.number]).columns.tolist()
     if target_column in numeric_features:

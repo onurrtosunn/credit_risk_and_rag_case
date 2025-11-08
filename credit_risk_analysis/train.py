@@ -12,10 +12,10 @@ import os
 import warnings
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Dict, Optional, Tuple, List
-from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold, cross_val_score, cross_validate
+from typing import Dict, Optional, Tuple
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, cross_validate
 from sklearn.preprocessing import (
-    StandardScaler, OrdinalEncoder, OneHotEncoder, QuantileTransformer
+    StandardScaler, OrdinalEncoder, OneHotEncoder
 )
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
@@ -25,7 +25,7 @@ from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassif
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import (
     roc_auc_score, accuracy_score, precision_score, recall_score, f1_score,
-    roc_curve, confusion_matrix, classification_report
+    roc_curve, confusion_matrix
 )
 import xgboost as xgb
 from category_encoders import TargetEncoder
@@ -40,18 +40,6 @@ warnings.filterwarnings('ignore')
 def create_preprocessors(X_train: pd.DataFrame, config_module=None):
     """
     Create preprocessing pipelines for different model types.
-    
-    Parameters:
-    -----------
-    X_train : pd.DataFrame
-        Training features - used to determine which features are available
-    config_module : module
-        Configuration module (default: config)
-    
-    Returns:
-    --------
-    tuple
-        (preprocessor_logistic, preprocessor_gbm)
     """
     if config_module is None:
         config_module = config
@@ -170,22 +158,6 @@ def train_model(
 ) -> Tuple[Pipeline, Dict]:
     """
     Train a single model with GridSearchCV.
-    
-    Parameters:
-    -----------
-    model_name : str
-        Name of the model to train
-    X_train : pd.DataFrame
-        Training features
-    y_train : pd.Series
-        Training target
-    config_module : module
-        Configuration module (default: config)
-    
-    Returns:
-    --------
-    tuple
-        (best_model, training_info)
     """
     if config_module is None:
         config_module = config
@@ -302,22 +274,6 @@ def train_all_models(
 ) -> Dict[str, Tuple[Pipeline, Dict]]:
     """
     Train all models.
-    
-    Parameters:
-    -----------
-    X_train : pd.DataFrame
-        Training features
-    y_train : pd.Series
-        Training target
-    config_module : module
-        Configuration module (default: config)
-    models_to_train : list, optional
-        List of model names to train (default: all models)
-    
-    Returns:
-    --------
-    dict
-        Dictionary with trained models and training info
     """
     if config_module is None:
         config_module = config
@@ -351,15 +307,6 @@ def save_models(
 ) -> None:
     """
     Save trained models to disk.
-    
-    Parameters:
-    -----------
-    trained_models : dict
-        Dictionary with trained models
-    config_module : module
-        Configuration module (default: config)
-    output_dir : str
-        Output directory for models
     """
     if config_module is None:
         config_module = config
@@ -400,24 +347,6 @@ def evaluate_model_cv(
 ) -> Dict:
     """
     Evaluate a model using cross-validation with multiple metrics.
-    
-    Parameters:
-    -----------
-    model : Pipeline
-        Trained model pipeline
-    X : pd.DataFrame
-        Features
-    y : pd.Series
-        Target
-    config_module : module
-        Configuration module (default: config)
-    cv : int, optional
-        Number of CV folds (default: from config)
-    
-    Returns:
-    --------
-    dict
-        Dictionary with CV evaluation results
     """
     if config_module is None:
         config_module = config
@@ -471,22 +400,6 @@ def get_feature_importance(
 ) -> pd.DataFrame:
     """
     Extract feature importance from a trained model.
-    
-    Parameters:
-    -----------
-    model : Pipeline
-        Trained model pipeline
-    X_train : pd.DataFrame
-        Training features (used to get feature names)
-    y_train : pd.Series
-        Training target (required for permutation importance)
-    model_name : str
-        Name of the model
-    
-    Returns:
-    --------
-    pd.DataFrame
-        DataFrame with feature names and importance scores
     """
     from sklearn.inspection import permutation_importance
     
@@ -592,19 +505,6 @@ def visualize_model_results(
 ) -> None:
     """
     Visualize model results including ROC curve and confusion matrix.
-    
-    Parameters:
-    -----------
-    model : Pipeline
-        Trained model pipeline
-    X_test : pd.DataFrame
-        Test features
-    y_test : pd.Series
-        Test target
-    model_name : str
-        Name of the model
-    save_path : str, optional
-        Path to save the plots
     """
     # Make predictions
     y_pred = model.predict(X_test)
@@ -662,17 +562,6 @@ def visualize_feature_importance(
 ) -> None:
     """
     Visualize feature importance.
-    
-    Parameters:
-    -----------
-    importance_df : pd.DataFrame
-        DataFrame with feature names and importance scores
-    model_name : str
-        Name of the model
-    top_n : int
-        Number of top features to display
-    save_path : str, optional
-        Path to save the plot
     """
     # Get top N features
     top_features = importance_df.head(top_n)
@@ -708,15 +597,6 @@ def visualize_cv_results(
 ) -> None:
     """
     Visualize cross-validation results.
-    
-    Parameters:
-    -----------
-    cv_results : dict
-        Dictionary with CV evaluation results
-    model_name : str
-        Name of the model
-    save_path : str, optional
-        Path to save the plot
     """
     cv_summary = cv_results['cv_summary']
     
@@ -760,18 +640,6 @@ def summarize_cv_results(
 ) -> pd.DataFrame:
     """
     Summarize cross-validation results in a DataFrame.
-    
-    Parameters:
-    -----------
-    cv_results : dict
-        Dictionary with CV evaluation results
-    model_name : str
-        Name of the model
-    
-    Returns:
-    --------
-    pd.DataFrame
-        DataFrame with CV summary
     """
     cv_summary = cv_results['cv_summary']
     
@@ -798,17 +666,6 @@ def save_model_results_to_csv(
 ) -> None:
     """
     Save model results to CSV files.
-    
-    Parameters:
-    -----------
-    test_results : dict
-        Dictionary with test set evaluation results for each model
-    cv_results_all : dict, optional
-        Dictionary with cross-validation results for each model
-    config_module : module
-        Configuration module (default: config)
-    output_dir : str
-        Output directory for CSV files (default: 'reports')
     """
     if config_module is None:
         config_module = config
@@ -899,4 +756,3 @@ if __name__ == "__main__":
     print("  - summarize_cv_results(): Summarize cross-validation results")
     print("  - save_model_results_to_csv(): Save model results to CSV files")
     print("\nImport this module in your scripts to use these functions.")
-

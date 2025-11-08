@@ -2,14 +2,7 @@
 Configuration file for Credit Risk Analysis
 This file contains all configurable parameters for data cleaning, feature engineering, and modeling.
 """
-
-# ============================================================================
-# DATA CLEANING CONFIGURATION
-# ============================================================================
-
-# Columns to drop (Data Leakage and Multicollinearity)
 COLUMNS_TO_DROP = {
-    # Data Leakage Variables (variables that contain information about the target)
     'data_leakage': [
         'total_pymnt',           # Total payment - contains future information
         'total_pymnt_inv',       # Total payment to investors - contains future information
@@ -28,17 +21,13 @@ COLUMNS_TO_DROP = {
     ]
 }
 
-# Missing Value Imputation Strategy
 MISSING_VALUE_IMPUTATION = {
-    # Fill with 'Unknown' (categorical features)
     'fill_unknown': [
         'emp_title'             # Employment title
     ],
-    # Fill with 0 (numerical features that should be 0 if missing)
     'fill_zero': [
         'delinq_2yrs'            # Number of delinquencies - should be 0 if missing
     ],
-    # Fill with median (numerical features)
     'fill_median': [
         # All other numerical features will be filled with median in the pipeline
         # This is handled automatically in the preprocessing pipeline
@@ -63,21 +52,17 @@ FEATURE_LISTS = {
         'tot_cur_bal',           # Total current balance
         'total_rev_hi_lim'       # Total revolving credit limit
     ],
-    # Ordinal features (ordered categorical)
     'ordinal_features': [
         'emp_length'             # Employment length (ordered)
     ],
-    # Low cardinality nominal features (unordered categorical with few categories)
     'low_cardinality_nominal': [
         'term'                   # Loan term (36/60 months)
     ],
-    # High cardinality nominal features (unordered categorical with many categories)
     'high_cardinality_nominal': [
         'emp_title'              # Employment title (many unique values)
     ]
 }
 
-# Engineered features to create - Çok fazla feature üretelim (alakalı alakasız)
 ENGINEERED_FEATURES = {
     # Basic ratio features
     'DTI': {
@@ -502,24 +487,17 @@ ENGINEERED_FEATURES = {
     }
 }
 
-# ============================================================================
-# MODELING CONFIGURATION
-# ============================================================================
-
-# Train/Test Split
 TRAIN_TEST_SPLIT = {
     'test_size': 0.2,
     'random_state': 42
 }
 
-# Cross-Validation
 CROSS_VALIDATION = {
     'n_splits': 5,
     'shuffle': True,
     'random_state': 42
 }
 
-# Model Hyperparameters (GridSearchCV)
 MODEL_PARAM_GRIDS = {
     'logistic_regression': {
         'classifier__C': [0.1, 1.0, 10.0],
@@ -550,7 +528,6 @@ MODEL_PARAM_GRIDS = {
     }
 }
 
-# Model Evaluation Metrics
 EVALUATION_METRICS = [
     'roc_auc',
     'accuracy',
@@ -559,11 +536,6 @@ EVALUATION_METRICS = [
     'f1_score'
 ]
 
-# ============================================================================
-# FILE PATHS
-# ============================================================================
-
-# Data paths
 DATA_PATHS = {
     'raw_data': 'data/credit_risk_case.xlsx',
     'cleaned_data': 'data/cleaned_data.csv',
@@ -571,7 +543,6 @@ DATA_PATHS = {
     'test_data': 'data/test_data.csv'
 }
 
-# Model paths
 MODEL_PATHS = {
     'logistic_regression': 'models/pd_logistic_pipeline.pkl',
     'hist_gradient_boosting': 'models/pd_gbm_pipeline.pkl',
@@ -580,7 +551,6 @@ MODEL_PATHS = {
     'xgboost': 'models/pd_xgb_pipeline.pkl'
 }
 
-# Output paths
 OUTPUT_PATHS = {
     'results': 'results/',
     'plots': 'plots/',
