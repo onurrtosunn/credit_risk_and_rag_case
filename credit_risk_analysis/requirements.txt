@@ -1,0 +1,11 @@
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+xgboost
+category-encoders
+imbalanced-learn
+openpyxl
+jupyter
+
