@@ -69,16 +69,8 @@ By performing comprehensive analysis on the dataset:
 
 ### 3. Feature Engineering
 
-By creating new features and transforming existing features:
+By creating new features and transforming existing features; DTI, Credit Utilization, Payment-to-Income Ratio etc.
 
-- Creating basic ratio features (DTI, Credit Utilization, Payment-to-Income Ratio)
-- Creating income-based features (income_squared, income_log, income_per_month)
-- Creating loan-based features (loan_squared, loan_log, loan_per_year)
-- Creating balance-based features (balance_squared, balance_log, balance_per_account)
-- Creating employment-based features (emp_length_squared, income_per_emp_year)
-- Creating interaction features (loan_income_interaction, balance_limit_interaction)
-- Creating polynomial features (loan_income_ratio_squared, utilization_rate_squared)
-- Creating risk indicators (high_risk_loan, high_risk_utilization, has_delinquency)
 
 ### 3.1 Feature Engineering Test Module
 
