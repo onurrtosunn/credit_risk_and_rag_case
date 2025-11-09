@@ -1,7 +1,5 @@
 # RAG-Based Customer Review Analysis System
 
-> 📁 [Ana README](../README.md) | Bu proje [Data Scientist Case Studies](../README.md) repository'sinin bir parçasıdır.
-
 A production-ready Retrieval-Augmented Generation (RAG) system for analyzing customer feedback with hybrid search (BM25 + FAISS) and sentiment analysis.
 
 ## 📋 Overview
@@ -359,15 +357,6 @@ The system generates various business insights including:
 - **Sentiment by Score**: Correlation between customer scores and sentiment analysis
 - **Correlation Heatmap**: Topic × Score correlation analysis
 - **Hidden Risks & Strengths**: Identification of customers with score-sentiment mismatches
-
-Example visualizations for "kredi" query:
-
-| Visualization | Description |
-|--------------|-------------|
-| ![Topic Frequency](eval/charts/topic_frequency_kredi.png) | Most frequently mentioned topics related to credit |
-| ![Sentiment by Score](eval/charts/sentiment_by_score_kredi.png) | Sentiment distribution across different customer scores |
-| ![Correlation Heatmap](eval/charts/correlation_heatmap_kredi.png) | Correlation between topics and customer scores |
-| ![Hidden Risks & Strengths](eval/charts/hidden_risks_strengths_kredi.png) | Detection of hidden risks and strengths |
 
 All visualizations are automatically generated in the `eval/charts/` directory when running the evaluation script.
 
