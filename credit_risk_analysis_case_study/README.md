@@ -1,5 +1,7 @@
 # Credit Risk Analysis
 
+> 📁 [Ana README](../README.md) | Bu proje [Data Scientist Case Studies](../README.md) repository'sinin bir parçasıdır.
+
 This project provides a comprehensive machine learning solution for credit risk prediction. The project has a modular structure that includes data cleaning, feature engineering, model training, and evaluation steps.
 
 ## Project Structure
@@ -40,6 +42,15 @@ pip install -r requirements.txt
 
 Place the data file at `data/credit_risk_case.xlsx`.
 
+## Quick Start
+
+1. Open and run `main.ipynb` notebook:
+```bash
+jupyter notebook main.ipynb
+```
+
+2. Execute all cells in the notebook to run the complete pipeline.
+
 ## Usage
 
 ### 1. Data Loading and Cleaning
@@ -77,6 +88,8 @@ By creating new features and transforming existing features; DTI, Credit Utiliza
 The `feature_engineering_test.ipynb` notebook provides comprehensive testing and analysis of all engineered features defined in the configuration. By performing the following operations:
 
 This module helps in understanding which engineered features are most predictive and provides comprehensive analysis before model training.
+
+![Feature Engineering Visualization](plots/output_all_features_violing_plot.png)
 
 ### 4. Model Training
 
@@ -116,6 +129,8 @@ By visualizing model results:
 - Creating model comparison plots
 - Visualizing all metrics comparatively
 
+![Model Metrics Comparison](plots/metrics_comparison.png)
+
 ### 7. Reporting
 
 By saving results to CSV files:
@@ -124,7 +139,21 @@ By saving results to CSV files:
 - Saving cross-validation results (`reports/model_cv_results.csv`)
 - Saving model comparison summary (`reports/model_comparison_summary.csv`)
 
-### Key Findings:
+## Model Regeneration
+
+To regenerate trained models, run the model training cells in `main.ipynb`. Models are saved to `models/` directory.
+
+**Note:** Model training can take 5-10 minutes due to GridSearchCV hyperparameter tuning.
+
+## Large Artifacts
+
+Generated artifacts:
+- **Models** (`models/*.pkl`): ~5-4 MB each, regenerated via `main.ipynb`
+- **Plots** (`plots/*.png`): ~100-500 KB each, auto-generated
+- **Reports** (`reports/*.csv`): ~10-100 KB each, auto-generated
+
+
+## Key Findings
 
 - Data preprocessing and preparation completed for model training
 - Missing values imputed using appropriate techniques

@@ -88,8 +88,9 @@ def encode_embeddings(
 
 def build_faiss_hnsw(embeddings: np.ndarray, m: int = 32, ef_construction: int = 200) -> faiss.Index:
     d = embeddings.shape[1]
-    index = faiss.IndexIVFPQ(d, m, faiss.METRIC_INNER_PRODUCT)
+    index = faiss.IndexHNSWFlat(d, faiss.METRIC_INNER_PRODUCT)
     index.hnsw.efConstruction = ef_construction
+    index.hnsw.M = m
     index.verbose = False
     index.add(embeddings.astype(np.float32))
     return index
