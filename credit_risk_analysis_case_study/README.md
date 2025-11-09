@@ -1,7 +1,5 @@
 # Credit Risk Analysis
 
-> 📁 [Ana README](../README.md) | Bu proje [Data Scientist Case Studies](../README.md) repository'sinin bir parçasıdır.
-
 This project provides a comprehensive machine learning solution for credit risk prediction. The project has a modular structure that includes data cleaning, feature engineering, model training, and evaluation steps.
 
 ## Project Structure
