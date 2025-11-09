@@ -1,0 +1,13 @@
+{
+  "model_name": "intfloat/multilingual-e5-small",
+  "embedding_dim": 384,
+  "metric": "inner_product_l2_normalized",
+  "hnsw_m": 32,
+  "hnsw_efConstruction": 200,
+  "hnsw_efSearch": 64,
+  "count": 50000,
+  "bm25": {
+    "tokenizer": "tr_tokenize_lemma"
+  },
+  "uses_e5_passage_prefix": true
+}

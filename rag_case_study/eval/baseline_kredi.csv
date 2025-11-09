@@ -1,0 +1,6 @@
+id,score,title,feedback,timestamp,sentiment_label,sentiment_score
+3705,5,Kredi Yorumu,Kredi başvurum hızlıca onaylandı.,2025-10-22 13:07:09+00:00,positive,0.5998771
+3542,4,Kredi Yorumu,Kredi limitim beklentimi karşıladı.,2025-10-22 13:07:09+00:00,negative,-0.9182838
+3523,1,Kredi Yorumu,Kredi limitim beklentimi karşıladı.,2025-10-22 13:07:09+00:00,negative,-0.9182838
+34941,4,Kredi Yorumu,Kredi süreci çok uzadı.,2025-10-22 13:07:09+00:00,negative,-0.9921496
+3600,5,Kredi Yorumu,Kredi süreci çok uzadı.,2025-10-22 13:07:09+00:00,negative,-0.9921496

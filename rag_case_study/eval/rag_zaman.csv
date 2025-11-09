@@ -1,0 +1,6 @@
+id,score,title,feedback,timestamp,sentiment_label,sentiment_score,faiss_similarity
+33309,2,Kredi Yorumu,Kredi süreci çok uzadı.,2025-10-22 13:07:09+00:00,negative,-0.9921496,0.824589729309082
+33320,3,Kredi Yorumu,Kredi süreci çok uzadı.,2025-10-22 13:07:09+00:00,negative,-0.9921496,0.824589729309082
+33216,1,Kredi Yorumu,Kredi süreci çok uzadı.,2025-10-22 13:07:09+00:00,negative,-0.9921496,0.824589729309082
+33286,4,Kredi Yorumu,Kredi süreci çok uzadı.,2025-10-22 13:07:09+00:00,negative,-0.9921496,0.824589729309082
+33275,4,Kredi Yorumu,Kredi süreci çok uzadı.,2025-10-22 13:07:09+00:00,negative,-0.9921496,0.824589729309082

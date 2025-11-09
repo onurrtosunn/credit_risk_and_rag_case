@@ -1,0 +1,6 @@
+id,score,title,feedback,timestamp,sentiment_label,sentiment_score,faiss_similarity
+33321,4,Krediye Ulaşma Yorumu,Krediye ulaşmak için online başvuru yeterliydi.,2025-10-22 13:07:09+00:00,positive,0.6831481,0.8599025011062622
+3705,5,Kredi Yorumu,Kredi başvurum hızlıca onaylandı.,2025-10-22 13:07:09+00:00,positive,0.5998771,0.0
+33208,5,Krediye Ulaşma Yorumu,Krediye ulaşmak için online başvuru yeterliydi.,2025-10-22 13:07:09+00:00,positive,0.6831481,0.8599025011062622
+3542,4,Kredi Yorumu,Kredi limitim beklentimi karşıladı.,2025-10-22 13:07:09+00:00,negative,-0.9182838,0.0
+33281,1,Krediye Ulaşma Yorumu,Krediye ulaşmak için online başvuru yeterliydi.,2025-10-22 13:07:09+00:00,positive,0.6831481,0.8599025011062622

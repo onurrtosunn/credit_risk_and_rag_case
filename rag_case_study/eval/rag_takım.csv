@@ -1,0 +1,6 @@
+id,score,title,feedback,timestamp,sentiment_label,sentiment_score,faiss_similarity
+33343,5,Destek Ekibi Yorumu,Destek ekibi profesyoneldi.,2025-10-22 13:07:09+00:00,positive,0.82456475,0.8459205031394958
+33347,5,Destek Ekibi Yorumu,Destek ekibi profesyoneldi.,2025-10-22 13:07:09+00:00,positive,0.82456475,0.8459205031394958
+33379,3,Destek Ekibi Yorumu,Destek ekibi profesyoneldi.,2025-10-22 13:07:09+00:00,positive,0.82456475,0.8459205031394958
+33234,4,Destek Ekibi Yorumu,Destek ekibi profesyoneldi.,2025-10-22 13:07:09+00:00,positive,0.82456475,0.8459205031394958
+33239,5,Destek Ekibi Yorumu,Destek ekibi profesyoneldi.,2025-10-22 13:07:09+00:00,positive,0.82456475,0.8459205031394958
