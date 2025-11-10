@@ -20,10 +20,8 @@ import faiss
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
-
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
-
 
 @functools.lru_cache(maxsize=200_000)
 def _lemma_tr(tok: str) -> str:
@@ -47,7 +45,6 @@ def _lemma_tr(tok: str) -> str:
         pass
     return tok
 
-
 def tr_tokenize(text: str) -> List[str]:
     # Lowercase, remove punctuation-like chars, split on whitespace, then lemmatize tokens
     text = text.lower()
@@ -56,17 +53,14 @@ def tr_tokenize(text: str) -> List[str]:
     toks = text.split() if text else []
     return [_lemma_tr(t) for t in toks]
 
-
 def build_bm25(corpus: List[str]) -> Tuple[BM25Okapi, List[List[str]]]:
     tokenized_corpus = [tr_tokenize(doc) for doc in corpus]
     bm25 = BM25Okapi(tokenized_corpus)
     return bm25, tokenized_corpus
 
-
 def l2_normalize(vecs: np.ndarray) -> np.ndarray:
     norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-12
     return vecs / norms
-
 
 def encode_embeddings(
     model: SentenceTransformer,
@@ -81,10 +75,9 @@ def encode_embeddings(
         batch_size=batch_size,
         show_progress_bar=True,
         convert_to_numpy=True,
-        normalize_embeddings=False,  # we'll normalize explicitly for IP
+        normalize_embeddings=False,
     )
     return embeddings
-
 
 def build_faiss_hnsw(embeddings: np.ndarray, m: int = 32, ef_construction: int = 200) -> faiss.Index:
     d = embeddings.shape[1]
@@ -94,7 +87,6 @@ def build_faiss_hnsw(embeddings: np.ndarray, m: int = 32, ef_construction: int =
     index.verbose = False
     index.add(embeddings.astype(np.float32))
     return index
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build FAISS (HNSW, IP) and BM25 indexes from cleaned Parquet.")
@@ -113,11 +105,9 @@ def main() -> None:
     if not required_cols.issubset(df.columns):
         raise ValueError(f"Parquet missing columns. Expected {required_cols}, found {set(df.columns)}")
 
-    # Preserve current order as index mapping
     df = df.reset_index(drop=True)
     texts = df["feedback"].astype(str).tolist()
 
-    # BM25
     print("Building BM25...")
     print(f"BM25 tokenization uses lemma: {'enabled' if _TR_LEMMA else 'disabled'}")
     bm25, tokenized_corpus = build_bm25(texts)
@@ -126,7 +116,6 @@ def main() -> None:
     with open(os.path.join(args.out_dir, "bm25_tokens.pkl"), "wb") as f:
         pickle.dump(tokenized_corpus, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # Embeddings
     print(f"Loading embedding model: {args.model_name}")
     model = SentenceTransformer(args.model_name)
     print("Encoding embeddings...")
@@ -136,16 +125,13 @@ def main() -> None:
         batch_size=args.batch_size,
         use_e5_prefix=not args.no_e5_prefix,
     )
-    # Normalize for inner product similarity
     embeddings = l2_normalize(embeddings).astype(np.float32)
 
     if args.save_embeddings:
         np.save(os.path.join(args.out_dir, "embeddings.npy"), embeddings)
 
-    # FAISS index
     print("Building FAISS HNSW (IP) index...")
     index = build_faiss_hnsw(embeddings, m=32, ef_construction=200)
-    # Tune search ef
     index.hnsw.efSearch = 64
 
     faiss_path = os.path.join(args.out_dir, "faiss_hnsw_ip.index")
@@ -174,9 +160,7 @@ def main() -> None:
         print(f"Pre-computed sentiment results not found at {precomputed_sentiment_path}")
         print("Run src/analyze_full_dataset.py first to enable sentiment pre-computation")
     
-    # Save metadata aligned with index
     meta_cols = ["id", "score", "title", "feedback", "timestamp"]
-    # Add sentiment columns if they exist
     if "sentiment_label" in df.columns:
         meta_cols.append("sentiment_label")
     if "sentiment_score" in df.columns:
@@ -184,7 +168,6 @@ def main() -> None:
     meta_path = os.path.join(args.out_dir, "meta.parquet")
     df[meta_cols].to_parquet(meta_path, index=False)
 
-    # Save config
     config = {
         "model_name": args.model_name,
         "embedding_dim": int(embeddings.shape[1]),
@@ -207,7 +190,6 @@ def main() -> None:
     print(f"- Meta:  {meta_path}")
     if args.save_embeddings:
         print(f"- Embeddings: {os.path.join(args.out_dir, 'embeddings.npy')}")
-
 
 if __name__ == "__main__":
     main()

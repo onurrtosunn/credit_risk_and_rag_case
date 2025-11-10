@@ -1,29 +1,16 @@
-#!/usr/bin/env python3
-"""
-Benchmark script for Goal 2: RAG vs Non-RAG latency comparison.
-Measures the speed difference between:
-- Scenario 1 (RAG): query_rag.py with a specific query (~0.8 seconds)
-- Scenario 2 (Non-RAG): analyze_full_dataset.py analyzing all 50,000 rows (~25 minutes)
-
-This demonstrates the performance benefit of RAG: analyzing only relevant reviews
-instead of processing the entire dataset.
-"""
-import argparse
-import json
 import os
-import subprocess
+import json
 import sys
 import time
-from typing import Dict, List
-
+import argparse
+import subprocess
 import pandas as pd
-
+from typing import Dict, List
 
 def ensure_dir(path: str) -> None:
     """Ensure directory exists."""
     if path:
         os.makedirs(path, exist_ok=True)
-
 
 def run_command(cmd: List[str], description: str) -> Dict[str, float]:
     """
@@ -98,12 +85,9 @@ def benchmark_rag_query(query: str, index_dir: str, output_dir: str) -> Dict[str
         "--limit", "1000",
         "--max_sentiment", "500",
         "--out_csv", output_csv,
-        "--print_examples", "0"
-    ]
+        "--print_examples", "0" ]
     
     result = run_command(cmd, f"RAG Query: '{query}'")
-    
-    # Try to extract result count from output
     result_count = 0
     if result["success"] and os.path.exists(output_csv):
         try:
@@ -117,7 +101,6 @@ def benchmark_rag_query(query: str, index_dir: str, output_dir: str) -> Dict[str
     result["query"] = query
     
     return result
-
 
 def benchmark_non_rag_full_analysis(input_file: str, output_file: str) -> Dict[str, float]:
     """
@@ -133,8 +116,6 @@ def benchmark_non_rag_full_analysis(input_file: str, output_file: str) -> Dict[s
     ]
     
     result = run_command(cmd, "Non-RAG Full Dataset Analysis")
-    
-    # Try to extract result count from output
     result_count = 0
     if result["success"] and os.path.exists(output_file):
         try:
@@ -145,12 +126,12 @@ def benchmark_non_rag_full_analysis(input_file: str, output_file: str) -> Dict[s
     
     result["result_count"] = result_count
     result["scenario"] = "Non-RAG"
-    
     return result
 
-
 def format_time(seconds: float) -> str:
-    """Format time in human-readable format."""
+    """
+    Format time in human-readable format.
+    """
     if seconds < 60:
         return f"{seconds:.2f} seconds"
     elif seconds < 3600:
@@ -161,41 +142,15 @@ def format_time(seconds: float) -> str:
         minutes = (seconds % 3600) / 60
         return f"{hours:.1f} hours {minutes:.1f} minutes ({seconds:.2f} seconds)"
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Benchmark RAG vs Non-RAG latency comparison (Goal 2)"
     )
-    parser.add_argument(
-        "--index-dir",
-        type=str,
-        default="index",
-        help="Directory containing FAISS/BM25 indexes"
-    )
-    parser.add_argument(
-        "--input-data",
-        type=str,
-        default="data/clean.parquet",
-        help="Input data file for Non-RAG analysis"
-    )
-    parser.add_argument(
-        "--queries",
-        type=str,
-        nargs="+",
-        default=["kredi", "araç", "takım"],
-        help="Queries to test with RAG"
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="outputs/benchmark",
-        help="Output directory for benchmark results"
-    )
-    parser.add_argument(
-        "--skip-non-rag",
-        action="store_true",
-        help="Skip Non-RAG benchmark (if already run)"
-    )
+    parser.add_argument("--index-dir", type=str, default="/home/onur/GitHub/case/rag3/index", help="Directory containing FAISS/BM25 indexes")
+    parser.add_argument("--input-data", type=str, default="/home/onur/GitHub/case/rag3/data/clean.parquet", help="Input data file for Non-RAG analysis")
+    parser.add_argument("--queries", type=str, nargs="+", default=["kredi", "araç", "takım"], help="Queries to test with RAG")
+    parser.add_argument("--output-dir", type=str, default="outputs/benchmark", help="Output directory for benchmark results")
+    parser.add_argument("--skip-non-rag", action="store_true", help="Skip Non-RAG benchmark (if already run)" )
     args = parser.parse_args()
     
     ensure_dir(args.output_dir)
@@ -209,8 +164,6 @@ def main():
     print("\n" + "="*60)
     
     results = []
-    
-    # Benchmark RAG queries
     print("\n" + "="*60)
     print("BENCHMARKING RAG QUERIES (Scenario 1)")
     print("="*60)
@@ -221,7 +174,6 @@ def main():
         rag_results.append(result)
         results.append(result)
     
-    # Calculate average RAG time
     successful_rag = [r for r in rag_results if r["success"]]
     if successful_rag:
         avg_rag_time = sum(r["wall_time_seconds"] for r in successful_rag) / len(successful_rag)
@@ -230,7 +182,6 @@ def main():
         avg_rag_time = 0
         avg_rag_cpu = 0
     
-    # Benchmark Non-RAG full analysis
     non_rag_result = None
     if not args.skip_non_rag:
         print("\n" + "="*60)
@@ -244,22 +195,18 @@ def main():
         print("\nSkipping Non-RAG benchmark (--skip-non-rag flag set)")
         print("Using existing results if available...")
         
-        # Try to load existing Non-RAG results
         non_rag_output = os.path.join(args.output_dir, "non_rag_full_analysis.parquet")
         if os.path.exists(non_rag_output):
-            # Estimate time from file (this is approximate)
-            # In real scenario, this would be ~25 minutes
             print(f"Found existing Non-RAG results at {non_rag_output}")
             print("Note: Actual Non-RAG analysis time is ~25 minutes for 50,000 rows")
             non_rag_result = {
                 "success": True,
-                "wall_time_seconds": 1500.0,  # ~25 minutes
+                "wall_time_seconds": 1500.0,
                 "cpu_time_seconds": 1500.0,
                 "scenario": "Non-RAG",
                 "result_count": len(pd.read_parquet(non_rag_output)) if os.path.exists(non_rag_output) else 0
             }
     
-    # Generate summary report
     print("\n" + "="*60)
     print("BENCHMARK SUMMARY")
     print("="*60)
@@ -270,7 +217,6 @@ def main():
         "comparison": {}
     }
     
-    # RAG results
     print("\n--- RAG Query Results (Scenario 1) ---")
     for result in rag_results:
         if result["success"]:
@@ -291,7 +237,6 @@ def main():
         summary["comparison"]["avg_rag_wall_time_seconds"] = avg_rag_time
         summary["comparison"]["avg_rag_cpu_time_seconds"] = avg_rag_cpu
     
-    # Non-RAG results
     if non_rag_result and non_rag_result.get("success"):
         print("\n--- Non-RAG Full Analysis (Scenario 2) ---")
         print(f"  Wall time: {format_time(non_rag_result['wall_time_seconds'])}")
@@ -303,7 +248,6 @@ def main():
             "result_count": non_rag_result["result_count"]
         }
         
-        # Comparison
         if successful_rag:
             speedup = non_rag_result["wall_time_seconds"] / avg_rag_time
             print("\n--- Performance Comparison ---")
@@ -312,7 +256,6 @@ def main():
             summary["comparison"]["speedup"] = speedup
             summary["comparison"]["time_saved_seconds"] = non_rag_result["wall_time_seconds"] - avg_rag_time
     
-    # Business insight
     print("\n" + "="*60)
     print("BUSINESS INSIGHT")
     print("="*60)
@@ -326,7 +269,6 @@ def main():
         print("Non-RAG tam analiz yaklaşık 25 dakika sürmektedir (50,000 satır için).")
         print(f"RAG, sorguya özel analiz için çok daha hızlıdır (~{1500/avg_rag_time:.0f}x daha hızlı).")
     
-    # Save results to JSON
     summary_file = os.path.join(args.output_dir, "benchmark_summary.json")
     with open(summary_file, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)

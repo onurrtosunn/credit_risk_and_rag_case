@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
-import argparse
-import json
 import os
-import pickle
 import re
+import sys
 import time
-from typing import Dict, List, Tuple
-
+import json
+import torch
+import pickle
+import faiss
 import numpy as np
+import warnings
+import argparse
 import pandas as pd
 from tqdm import tqdm
+from collections import Counter
+from typing import Dict, List, Tuple
 
-import faiss
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer, CrossEncoder
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-import torch
-import warnings
-from collections import Counter
 
-# Import visualization functions
-import sys
+
 src_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
+
 from visualization import (
     plot_sentiment_distribution,
     plot_topic_frequency,
@@ -36,20 +36,26 @@ from visualization import (
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-
 def ensure_dir(path: str) -> None:
+    """
+    Create the directory if the path is provided.
+    """
     if path:
         os.makedirs(path, exist_ok=True)
 
-
 def tr_tokenize(text: str) -> List[str]:
+    """
+    Tokenize Turkish text into lowercase alphanumeric tokens.
+    """
     text = text.lower()
     text = re.sub(r"[^\wçğıöşü\s]", " ", text, flags=re.IGNORECASE)
     text = re.sub(r"\s+", " ", text, flags=re.MULTILINE).strip()
     return text.split() if text else []
 
-
 def load_indexes(index_dir: str):
+    """
+    Load retrieval and metadata indexes from the given directory.
+    """
     with open(os.path.join(index_dir, "config.json"), "r", encoding="utf-8") as f:
         cfg = json.load(f)
     bm25: BM25Okapi = pickle.load(open(os.path.join(index_dir, "bm25.pkl"), "rb"))
@@ -57,12 +63,16 @@ def load_indexes(index_dir: str):
     meta = pd.read_parquet(os.path.join(index_dir, "meta.parquet"))
     return cfg, bm25, faiss_index, meta
 
-
 def load_embed_model(model_name: str) -> SentenceTransformer:
+    """
+    Load a sentence transformer embedding model by name.
+    """
     return SentenceTransformer(model_name)
 
-
 def encode_query(model: SentenceTransformer, query: str, use_e5_prefix: bool) -> np.ndarray:
+    """
+    Encode a query and return a normalized embedding vector.
+    """
     q = f"query: {query}" if use_e5_prefix else query
     v = model.encode([q], batch_size=1, show_progress_bar=False, convert_to_numpy=True, normalize_embeddings=False)
     v = v / (np.linalg.norm(v, axis=1, keepdims=True) + 1e-12)
@@ -70,6 +80,9 @@ def encode_query(model: SentenceTransformer, query: str, use_e5_prefix: bool) ->
 
 
 def bm25_topk(bm25: BM25Okapi, query: str, k: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Retrieve top-k document indices and BM25 scores for the query.
+    """
     tokens = tr_tokenize(query)
     scores = bm25.get_scores(tokens)
     scores = np.asarray(scores)
@@ -82,11 +95,17 @@ def bm25_topk(bm25: BM25Okapi, query: str, k: int) -> Tuple[np.ndarray, np.ndarr
 
 
 def faiss_topk(index: faiss.Index, query_vec: np.ndarray, k: int) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Retrieve top-k FAISS ids and similarity scores for the query vector.
+    """
     scores, ids = index.search(query_vec, k)
     return ids[0], scores[0]
 
 
 def rrf_fuse(candidates: Dict[str, List[Tuple[int, float]]], k: int = 60) -> List[Tuple[int, float]]:
+    """
+    Fuse multiple ranked lists using reciprocal rank fusion.
+    """
     rrf: Dict[int, float] = {}
     for _, docs in candidates.items():
         for r, (doc_id, _) in enumerate(docs, start=1):
@@ -96,6 +115,9 @@ def rrf_fuse(candidates: Dict[str, List[Tuple[int, float]]], k: int = 60) -> Lis
 
 
 def load_sentiment_model(model_name: str):
+    """
+    Load a tokenizer and sequence classification model for sentiment analysis.
+    """
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     model.eval()
@@ -103,10 +125,14 @@ def load_sentiment_model(model_name: str):
 
 
 def infer_label_mapping(id2label: Dict[int, str]) -> Dict[int, float]:
+    """
+    Infer numeric sentiment scores from label names provided by the model.
+    """
     mapping_by_name: Dict[str, float] = {"negative": -1.0, "neg": -1.0, "positive": 1.0, "pos": 1.0, "neutral": 0.0, "neu": 0.0}
     label_map: Dict[int, float] = {}
     matched = set()
     star_detected = False
+
     for i, name in id2label.items():
         lname = name.lower()
         m = re.search(r"\b([1-5])\s*star", lname)
@@ -126,14 +152,18 @@ def infer_label_mapping(id2label: Dict[int, str]) -> Dict[int, float]:
             label_map[i] = score
             matched.add(i)
     num_labels = len(id2label)
+
     if len(matched) == num_labels and (star_detected or num_labels in (2, 3)):
         return label_map
+
     if num_labels == 2:
         return {0: -1.0 if 0 not in label_map else label_map[0], 1: 1.0 if 1 not in label_map else label_map[1]}
+
     if num_labels == 3:
         default_map = {0: -1.0, 1: 0.0, 2: 1.0}
         default_map.update(label_map)
         return default_map
+
     ordered = sorted(id2label.keys())
     values = np.linspace(-1.0, 1.0, num=len(ordered))
     return {i: float(v) for i, v in zip(ordered, values)}
@@ -141,14 +171,20 @@ def infer_label_mapping(id2label: Dict[int, str]) -> Dict[int, float]:
 
 @torch.inference_mode()
 def sentiment_predict(tokenizer, model, texts: List[str], batch_size: int = 32, max_length: int = 256):
+    """
+    Run batch sentiment prediction returning labels and numeric sentiment scores.
+    """
     if len(texts) == 0:
         return [], np.array([], dtype=np.float32)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
+
     id2label = {i: l for i, l in enumerate(model.config.id2label.values())} if isinstance(model.config.id2label, dict) else {i: f"LABEL_{i}" for i in range(model.config.num_labels)}
     label_value_map = infer_label_mapping(id2label)
     all_scores = []
     all_labels = []
+
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
         enc = tokenizer(batch, padding=True, truncation=True, max_length=max_length, return_tensors="pt")
@@ -160,25 +196,30 @@ def sentiment_predict(tokenizer, model, texts: List[str], batch_size: int = 32, 
         numeric = (probs * value_vec[None, :]).sum(axis=1)
         all_scores.append(numeric)
         all_labels.extend([id2label[int(pid)] for pid in pred_ids])
+    
     sentiment_numeric = np.concatenate(all_scores, axis=0) if len(all_scores) > 0 else np.array([], dtype=np.float32)
     return all_labels, sentiment_numeric
 
-
 def aggregate_metrics(df_subset: pd.DataFrame) -> Dict[str, float]:
+    """
+    Calculate aggregate sentiment metrics and correlation statistics for a subset.
+    """
     out: Dict[str, float] = {}
     if len(df_subset) == 0:
         return out
+    
     if "sentiment_score" in df_subset.columns:
         out["sentiment_mean"] = float(df_subset["sentiment_score"].mean())
         out["sentiment_median"] = float(df_subset["sentiment_score"].median())
         out["sentiment_std"] = float(df_subset["sentiment_score"].std())
+        
         if "sentiment_label" in df_subset.columns:
             dist = df_subset["sentiment_label"].value_counts(normalize=True)
             for k, v in dist.items():
                 out[f"class_ratio_{k}"] = float(v)
         if "score" in df_subset.columns:
             mapped = (df_subset["score"].astype(float) - 3.0) / 2.0
-            # Safe Pearson (avoid divide-by-zero / NaN when variance is zero)
+            
             def safe_pearson(a: pd.Series, b: pd.Series) -> float:
                 if len(a) < 2:
                     return float("nan")
@@ -188,7 +229,7 @@ def aggregate_metrics(df_subset: pd.DataFrame) -> Dict[str, float]:
                     return float("nan")
                 return float(np.corrcoef(a, b)[0, 1])
             pearson = safe_pearson(mapped, df_subset["sentiment_score"])
-            # Safe Spearman via ranks
+            
             def safe_spearman(a: pd.Series, b: pd.Series) -> float:
                 if len(a) < 2:
                     return float("nan")
@@ -196,15 +237,17 @@ def aggregate_metrics(df_subset: pd.DataFrame) -> Dict[str, float]:
                 rb = b.rank(method="average")
                 return safe_pearson(ra, rb)
             spearman = safe_spearman(mapped, df_subset["sentiment_score"])
+            
             out["corr_pearson_score_vs_sentiment"] = pearson
             out["corr_spearman_score_vs_sentiment"] = spearman
-            # Business-facing rates: % negative for score<=2, % positive for score>=3
+            
             def to_class(x: float) -> str:
                 if x <= -0.2:
                     return "negative"
                 if x >= 0.2:
                     return "positive"
                 return "neutral"
+
             if "sentiment_score" in df_subset.columns:
                 sent_classes = df_subset["sentiment_score"].apply(to_class)
                 df_tmp = df_subset.assign(_sent_class=sent_classes)
@@ -218,14 +261,17 @@ def aggregate_metrics(df_subset: pd.DataFrame) -> Dict[str, float]:
 
 
 def run_baseline(query: str, bm25: BM25Okapi, meta: pd.DataFrame, tokenizer, sent_model, k_lex: int, limit: int):
+    """
+    Execute the BM25-only retrieval flow and compute sentiment metrics.
+    """
     t0 = time.perf_counter()
     lex_ids, lex_scores = bm25_topk(bm25, query, k=k_lex)
     retrieve_ms = (time.perf_counter() - t0) * 1000.0
-    # Filter out zero-score matches to avoid unrelated results
+
     if len(lex_ids) > 0:
         mask = lex_scores > 0
         filtered_ids = lex_ids[mask]
-        # If no positive BM25 scores, fallback to substring match over full corpus (feedback/title)
+        
         if filtered_ids.size == 0:
             fb = meta["feedback"].astype(str).str.contains(query, case=False, na=False, regex=False)
             tt = meta["title"].astype(str).str.contains(query, case=False, na=False, regex=False) if "title" in meta.columns else pd.Series([False] * len(meta))
@@ -236,24 +282,25 @@ def run_baseline(query: str, bm25: BM25Okapi, meta: pd.DataFrame, tokenizer, sen
     else:
         filtered_ids = lex_ids
     doc_ids = filtered_ids.tolist()
+
     if limit > 0:
         doc_ids = doc_ids[: limit]
+
     result_df = meta.iloc[doc_ids].copy().reset_index(drop=True) if len(doc_ids) > 0 else pd.DataFrame(columns=meta.columns)
     t1 = time.perf_counter()
+
     if len(result_df) > 0:
-        # Check if pre-computed sentiment exists in meta
         if "sentiment_label" in meta.columns and "sentiment_score" in meta.columns:
-            # Use pre-computed sentiment (fast lookup - T6 becomes ~0ms)
             result_df["sentiment_label"] = meta.iloc[doc_ids]["sentiment_label"].values
             result_df["sentiment_score"] = meta.iloc[doc_ids]["sentiment_score"].values
         else:
-            # Fallback: Compute sentiment on-the-fly (backward compatibility)
             labels, numeric = sentiment_predict(tokenizer, sent_model, result_df["feedback"].astype(str).tolist())
             result_df["sentiment_label"] = labels
             result_df["sentiment_score"] = numeric
     else:
         result_df["sentiment_label"] = []
         result_df["sentiment_score"] = []
+
     sent_ms = (time.perf_counter() - t1) * 1000.0
     total_ms = (time.perf_counter() - t0) * 1000.0
     metrics = aggregate_metrics(result_df)
@@ -262,19 +309,24 @@ def run_baseline(query: str, bm25: BM25Okapi, meta: pd.DataFrame, tokenizer, sen
 
 
 def run_rag(query: str, bm25: BM25Okapi, faiss_index, embed_model, use_e5_prefix: bool, meta: pd.DataFrame, tokenizer, sent_model, k_lex: int, k_vec: int, limit: int, use_reranker: bool, reranker_model_name: str, rrf_k: int, min_sim: float, max_sentiment: int = 1000):
+    """
+    Run the hybrid BM25 and FAISS retrieval pipeline with optional reranking and sentiment.
+    """
     t0 = time.perf_counter()
     lex_ids, lex_scores = bm25_topk(bm25, query, k=k_lex)
     q_vec = encode_query(embed_model, query, use_e5_prefix=use_e5_prefix)
     vec_ids, vec_scores = faiss_topk(faiss_index, q_vec, k=k_vec)
+
     lex_pairs = list(zip(lex_ids.tolist(), lex_scores.tolist()))
     vec_pairs = list(zip(vec_ids.tolist(), vec_scores.tolist()))
+
     lex_pairs.sort(key=lambda x: x[1], reverse=True)
     vec_pairs.sort(key=lambda x: x[1], reverse=True)
+
     fused = rrf_fuse({"bm25": lex_pairs, "faiss": vec_pairs}, k=rrf_k)
-    # Don't apply limit yet - apply after min_sim filtering for better quality
     fused_ids = [doc_id for doc_id, _ in fused]
-    # Build FAISS similarity map for later lookup (index position -> score)
     faiss_score_map = {int(doc_id): float(score) for doc_id, score in vec_pairs}
+
     if use_reranker and len(fused_ids) > 0:
         reranker = CrossEncoder(reranker_model_name)
         pairs = [(query, str(meta.iloc[i]["feedback"])) for i in fused_ids]
@@ -283,62 +335,59 @@ def run_rag(query: str, bm25: BM25Okapi, faiss_index, embed_model, use_e5_prefix
         fused_ids = [fused_ids[i] for i in order]
     retrieve_ms = (time.perf_counter() - t0) * 1000.0
     result_df = meta.iloc[fused_ids].copy().reset_index(drop=True) if len(fused_ids) > 0 else pd.DataFrame(columns=meta.columns)
-    # Add FAISS similarity scores to DataFrame (use only FAISS scores, no additional computation)
+    
     if len(result_df) > 0:
-        # Use only FAISS scores (fast lookup, no embedding computation)
         sim_list = [faiss_score_map.get(int(idx), 0.0) for idx in fused_ids]
-        # Apply similarity threshold filtering only if min_sim > 0
-        # Keep BM25-only results but limit them to prevent too many low-quality results
+        
         if min_sim > 0:
             keep_positions = []
             bm25_only_count = 0
-            max_bm25_only = 1000  # Limit BM25-only results to prevent spam
+            max_bm25_only = 1000
             for i, sim in enumerate(sim_list):
-                # Keep if: has FAISS score and sim >= min_sim, OR no FAISS score (BM25-only, limited)
                 has_faiss = int(fused_ids[i]) in faiss_score_map
+    
                 if has_faiss:
-                    # FAISS result: apply min_sim filter
                     if sim >= min_sim:
                         keep_positions.append(i)
+            
                 else:
-                    # BM25-only result: keep but limit count
                     if bm25_only_count < max_bm25_only:
                         keep_positions.append(i)
                         bm25_only_count += 1
+            
             if len(keep_positions) < len(sim_list):
                 fused_ids = [fused_ids[i] for i in keep_positions]
                 result_df = result_df.iloc[keep_positions].reset_index(drop=True)
                 sim_list = [sim_list[i] for i in keep_positions]
-        # Apply limit after filtering (for quality)
+
         if limit > 0 and len(fused_ids) > limit:
             fused_ids = fused_ids[: limit]
             result_df = result_df.iloc[: limit].reset_index(drop=True)
             sim_list = sim_list[: limit]
         result_df["faiss_similarity"] = sim_list
     t1 = time.perf_counter()
+    
     if len(result_df) > 0:
-        # Check if pre-computed sentiment exists in meta
+    
         if "sentiment_label" in meta.columns and "sentiment_score" in meta.columns:
-            # Use pre-computed sentiment (fast lookup - T6 becomes ~0ms)
             result_df["sentiment_label"] = meta.iloc[fused_ids]["sentiment_label"].values
             result_df["sentiment_score"] = meta.iloc[fused_ids]["sentiment_score"].values
-            # Reset index to align with result_df
             result_df = result_df.reset_index(drop=True)
+
         else:
-            # Fallback: Compute sentiment on-the-fly (backward compatibility)
-            # Limit sentiment analysis to first N results for speed (0 = all)
             n_sent = len(result_df) if (max_sentiment <= 0) else min(max_sentiment, len(result_df))
+            
             if n_sent < len(result_df):
-                # Only analyze first N, fill rest with NaN
                 texts_sent = result_df["feedback"].astype(str).tolist()[:n_sent]
-                labels, numeric = sentiment_predict(tokenizer, sent_model, texts_sent, batch_size=256)  # Increased batch size
-                # Extend with NaN for remaining rows
+                labels, numeric = sentiment_predict(tokenizer, sent_model, texts_sent, batch_size=256)
                 labels.extend([None] * (len(result_df) - n_sent))
                 numeric = np.concatenate([numeric, np.full(len(result_df) - n_sent, np.nan, dtype=np.float32)])
+
             else:
-                labels, numeric = sentiment_predict(tokenizer, sent_model, result_df["feedback"].astype(str).tolist(), batch_size=256)  # Increased batch size
+                labels, numeric = sentiment_predict(tokenizer, sent_model, result_df["feedback"].astype(str).tolist(), batch_size=256)
             result_df["sentiment_label"] = labels
             result_df["sentiment_score"] = numeric
+
     else:
         result_df["sentiment_label"] = []
         result_df["sentiment_score"] = []
@@ -348,8 +397,10 @@ def run_rag(query: str, bm25: BM25Okapi, faiss_index, embed_model, use_e5_prefix
     metrics.update({"latency_ms_retrieval": retrieve_ms, "latency_ms_sentiment": sent_ms, "latency_ms_total": total_ms, "count": int(len(result_df))})
     return result_df, metrics
 
-
 def main() -> None:
+    """
+    Evaluate baseline and RAG retrieval strategies via CLI and output insights.
+    """
     parser = argparse.ArgumentParser(description="Evaluate RAG vs Non-RAG (BM25) on sentiment correlation and latency")
     parser.add_argument("--index-dir", type=str, default="/home/onur/GitHub/case/rag3/index")
     parser.add_argument("--queries", type=str, default="", help="Comma-separated queries")
@@ -398,6 +449,7 @@ def main() -> None:
             k_lex=args.k_lex,
             limit=args.limit,
         )
+
         rag_df, rag_metrics = run_rag(
             query=q,
             bm25=bm25,
@@ -416,24 +468,34 @@ def main() -> None:
             min_sim=args.min_sim,
             max_sentiment=args.max_sentiment,
         )
+
         safe_query = re.sub(r"\W+", "_", q)[:40]
         base_csv = os.path.join(args.out_dir, f"baseline_{safe_query}.csv")
         rag_csv = os.path.join(args.out_dir, f"rag_{safe_query}.csv")
-        
-        # Save only print_examples rows to CSV
         if len(base_df) > 0:
             base_df.head(args.print_examples).to_csv(base_csv, index=False)
         if len(rag_df) > 0:
             rag_df.head(args.print_examples).to_csv(rag_csv, index=False)
-        # ---------- Standardized Output Structure ----------
+
         def label_dist(df: pd.DataFrame) -> Dict[str, float]:
+            """
+            Return normalized sentiment label ratios for the provided DataFrame.
+            """
             if "sentiment_label" not in df.columns or len(df) == 0:
                 return {}
             vc = df["sentiment_label"].value_counts(normalize=True)
             return {k: float(v) for k, v in vc.items()}
+
         def mean_score(df: pd.DataFrame) -> float:
+            """
+            Compute the mean sentiment score when available.
+            """
             return float(df["sentiment_score"].mean()) if "sentiment_score" in df.columns and len(df) > 0 else float("nan")
+
         def print_examples(df: pd.DataFrame, n: int, header: str, show_similarity: bool = False) -> None:
+            """
+            Print at most n example rows with optional similarity scores.
+            """
             print(header)
             n_show = min(max(n, 0), len(df))
             for i in range(n_show):
@@ -454,41 +516,45 @@ def main() -> None:
         base_n = int(base_metrics.get("count", len(base_df)))
         rag_n = int(rag_metrics.get("count", len(rag_df)))
 
-        # 1. Input Topic
         print("\n1. Input Topic")
         print(q)
 
-        # 2. Non-RAG Retrieval Result
         print("\n2. Non-RAG Retrieval Result")
         print(f"Number of matched feedback entries: {base_n}")
+
         if args.print_examples > 0:
             print_examples(base_df, args.print_examples, "Comments:")
+
         print("Sentiment summary:")
         print(f"- Counts (ratios): {base_labels}")
         print(f"- Mean score: {base_mean:.3f}")
         print("Short interpretation: BM25-based matches; sensitive to word matching, may miss semantic variants.")
 
-        # 3. RAG Retrieval Result
         print("\n3. RAG Retrieval Result")
         print(f"Number of matched feedback entries: {rag_n}")
+
         if args.print_examples > 0:
             print_examples(rag_df, args.print_examples, "Comments (semantic):", show_similarity=True)
+
         print("Sentiment summary:")
         print(f"- Counts (ratios): {rag_labels}")
         print(f"- Mean score: {rag_mean:.3f}")
         print("Short interpretation: Tends to capture broader/implicitly related comments through semantic similarity.")
-
-        # 4. Comparison Summary (tabular style)
         print("\n4. Comparison Summary")
+
         def get_ratio(d: Dict[str, float], key: str) -> float:
+            """
+            Safely fetch a ratio value from a dictionary.
+            """
             return float(d.get(key, 0.0))
+
         pos_diff = get_ratio(rag_labels, "positive") - get_ratio(base_labels, "positive")
         neg_diff = get_ratio(rag_labels, "negative") - get_ratio(base_labels, "negative")
         neu_diff = get_ratio(rag_labels, "neutral") - get_ratio(base_labels, "neutral")
         mean_diff = rag_mean - base_mean
         cover_diff = rag_n - base_n
-        # ASCII table formatting
         headers = ["Aspect", "Non-RAG", "RAG", "Difference"]
+
         rows_tbl = [
             ["Coverage (N)", f"{base_n}", f"{rag_n}", f"RAG {('+' if cover_diff>=0 else '')}{cover_diff} (number of results difference)"],
             ["Positive ratio", f"{get_ratio(base_labels,'positive'):.2f}", f"{get_ratio(rag_labels,'positive'):.2f}", f"Δ {pos_diff:+.2f}"],
@@ -498,30 +564,38 @@ def main() -> None:
             ["Latency (retrieval ms)", f"{base_metrics.get('latency_ms_retrieval', float('nan')):.0f}", f"{rag_metrics.get('latency_ms_retrieval', float('nan')):.0f}", " "],
             ["Latency (total ms)", f"{base_metrics.get('latency_ms_total', float('nan')):.0f}", f"{rag_metrics.get('latency_ms_total', float('nan')):.0f}", ""],
         ]
+
         col_widths = [max(len(str(x)) for x in [h] + [r[i] for r in rows_tbl]) for i, h in enumerate(headers)]
+
         def print_sep():
             print("+" + "+".join("-" * (w + 2) for w in col_widths) + "+")
+
         def print_row(vals):
             print("| " + " | ".join(f"{str(v):<{col_widths[i]}}" for i, v in enumerate(vals)) + " |")
+
         print_sep()
         print_row(headers)
         print_sep()
+        
         for r in rows_tbl:
             print_row(r)
         print_sep()
 
-        # ---------- Per-query narrative insights ----------
         def to_class(x: float) -> str:
+            """
+            Convert a sentiment score into categorical polarity.
+            """
             if x <= -0.2:
                 return "negative"
             if x >= 0.2:
                 return "positive"
             return "neutral"
+
         rd = rag_df.copy()
         rd["_sent_class"] = rd["sentiment_score"].apply(to_class)
         neg_rate = float((rd["_sent_class"] == "negative").mean()) if len(rd) > 0 else float("nan")
         pos_rate = float((rd["_sent_class"] == "positive").mean()) if len(rd) > 0 else float("nan")
-        # Keyword extraction on negative subset (unigram + bigram)
+
         STOP_TR = {
             "ve","veya","ile","ama","gibi","çok","daha","mi","mı","mu","mü","de","da","ki","bu","şu","o",
             "bir","birçok","her","hiç","olan","oldu","olması","olarak","için","üzere","ise","yada","yani",
@@ -529,30 +603,39 @@ def main() -> None:
             "var","yok","yine","az","en","olanlar","ettim","ettik","ettiniz","etti","etmek","hem",
             "şeklinde","konu","konuda","durum","durumda"
         }
+
         def tokenize_tr(text: str) -> List[str]:
+            """
+            Tokenize filtered Turkish text into meaningful tokens.
+            """
             text = str(text).lower()
             text = re.sub(r"[^\wçğıöşü\s]", " ", text, flags=re.IGNORECASE)
             toks = [t for t in re.sub(r"\s+"," ",text).strip().split(" ") if t and t not in STOP_TR and len(t) >= 2]
             return toks
+
         def top_terms(texts: List[str], topk: int = 10) -> List[str]:
+            """
+            Extract the most frequent uni-grams and bi-grams from texts.
+            """
             uni = Counter()
             bi = Counter()
             for t in texts:
                 toks = tokenize_tr(t)
                 uni.update(toks)
+
                 if len(toks) >= 2:
                     bigs = [f"{a} {b}" for a, b in zip(toks[:-1], toks[1:])]
                     bi.update(bigs)
             items = [(k, v) for k, v in bi.items()] + [(k, v) for k, v in uni.items()]
             items.sort(key=lambda x: x[1], reverse=True)
             return [k for k, _ in items[:topk]]
+
         neg_texts = rd.loc[rd["_sent_class"] == "negative", "feedback"].astype(str).tolist()
         neg_top = top_terms(neg_texts, topk=5) if neg_texts else []
-        # Correlation call (reuse rag_metrics if present)
         pearson = rag_metrics.get("corr_pearson_score_vs_sentiment", float("nan"))
         corr_txt = "high" if isinstance(pearson, (float,int)) and abs(float(pearson)) >= 0.5 else "medium/low"
         corr_pct = abs(float(pearson)) * 100.0 if isinstance(pearson, (float, int)) else float("nan")
-        # 5. Business Insight Summary (Actionable)
+
         print("\n5. Business Insight Summary")
         if neg_rate == neg_rate:
             if neg_rate >= 0.6:
@@ -561,6 +644,7 @@ def main() -> None:
                 print("• Dissatisfaction is medium; plan quick improvements for frequently occurring complaint patterns.")
             else:
                 print("• Dissatisfaction is low; processes are generally healthy but review outlier complaints.")
+
         if neg_top:
             print(f"• Root-cause hints (prominent in negatives): {', '.join(neg_top[:5])}")
         if pos_rate == pos_rate:
@@ -573,55 +657,42 @@ def main() -> None:
         else:
             print(f"• Customer score vs sentiment correlation is {corr_txt}.")
 
-        # 6. Visualization Recommendations (text-only)
         print("\n6. Visualization Recommendations")
         print("- Pie chart: Sentiment distribution (positive/negative/neutral)")
         print("- Bar chart: Theme/keyword frequencies (negative subset)")
 
-        # 7. Generate visualizations for RAG results
         print("\n7. Generating Visualizations for RAG Results")
         charts_dir = os.path.join(args.out_dir, "charts")
         viz_ensure_dir(charts_dir)
-        
-        # Generate visualizations with query name in filename
         query_prefix = safe_query
         
         try:
-            # 1. Sentiment distribution
             plot_sentiment_distribution(
                 rag_df,
                 os.path.join(charts_dir, f"sentiment_distribution_{query_prefix}.png")
             )
-            
-            # 2. Topic frequency
             plot_topic_frequency(
                 rag_df,
                 os.path.join(charts_dir, f"topic_frequency_{query_prefix}.png"),
                 topk=15
             )
-            
-            # 3. Sentiment by score
             plot_sentiment_by_score(
                 rag_df,
                 os.path.join(charts_dir, f"sentiment_by_score_{query_prefix}.png")
             )
-            
-            # 4. Correlation heatmap (Title x Score x sentiment_score)
             plot_correlation_heatmap(
                 rag_df,
                 os.path.join(charts_dir, f"correlation_heatmap_{query_prefix}.png"),
                 top_topics=20
             )
-            
-            # 5. Hidden risks and strengths
             plot_hidden_risks_and_strengths(
                 rag_df,
                 os.path.join(charts_dir, f"hidden_risks_strengths_{query_prefix}.png"),
                 topk=10
             )
-            
-            # Print hidden risks and strengths summary
+
             detection = detect_hidden_risks_and_strengths(rag_df)
+
             if detection["risk_count"] > 0 or detection["strength_count"] > 0:
                 print(f"\nHidden Risks & Strengths:")
                 print(f"- Hidden Risk Count (Score 4-5 but Sentiment Negative): {detection['risk_count']}")
@@ -650,33 +721,38 @@ def main() -> None:
             "rag": rag_metrics,
         })
 
-    # Flatten metrics into a table
     records = []
+
     def flat(prefix: str, d: Dict[str, float]) -> Dict[str, float]:
+        """
+        Prefix dictionary keys for flattened metric export.
+        """
         return {f"{prefix}.{k}": v for k, v in d.items()}
+
     for r in rows:
         rec = {"query": r["query"]}
         rec.update(flat("baseline", r["baseline"]))
         rec.update(flat("rag", r["rag"]))
         records.append(rec)
+
     df_metrics = pd.DataFrame.from_records(records)
     metrics_csv = os.path.join(args.out_dir, "summary_metrics.csv")
     df_metrics.to_csv(metrics_csv, index=False)
     print(f"Saved per-query metrics to {metrics_csv}")
 
-    # Print business commentary (averaged across queries) for RAG (guard if columns missing)
     col_neg = "rag.rate_negative_for_score_le_2"
     col_pos = "rag.rate_positive_for_score_ge_3"
+
     if col_neg in df_metrics.columns and col_pos in df_metrics.columns:
         rag_neg = df_metrics[col_neg].dropna()
         rag_pos = df_metrics[col_pos].dropna()
+
         if len(rag_neg) > 0 and len(rag_pos) > 0:
             neg_pct = 100.0 * float(rag_neg.mean())
             pos_pct = 100.0 * float(rag_pos.mean())
             print("\nBusiness commentary (RAG):")
             print(f"- {neg_pct:.0f}% of users who gave scores 1-2 had negative sentiment analysis.")
             print(f"- {pos_pct:.0f}% positive sentiment is seen in scores 3 and above. This correlation shows that our sentiment analysis aligns with scores.")
-
 
 if __name__ == "__main__":
     main()
