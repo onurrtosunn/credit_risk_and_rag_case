@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  credit-risk-analysis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: credit-risk-analysis
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Optional: provide your WandB API key via environment or .env file
+      - WANDB_API_KEY=${WANDB_API_KEY:-}
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./plots:/app/plots
+      - ./reports:/app/reports
+    restart: unless-stopped
+    working_dir: /app
+

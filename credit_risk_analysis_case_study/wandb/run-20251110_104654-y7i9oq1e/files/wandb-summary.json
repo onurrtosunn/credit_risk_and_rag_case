@@ -1,0 +1,1 @@
+{"best_params":{"classifier__C":0.1,"classifier__penalty":"l1","classifier__solver":"liblinear"},"n_cv_splits":5,"_wandb":{"runtime":7},"_runtime":7,"_timestamp":1.7627608228088195e+09,"_step":0,"best_cv_score":0.5351398434516991}

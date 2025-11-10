@@ -405,5 +405,5 @@ python src/analyze_full_dataset.py --input data/clean.parquet --output outputs/f
 python build_index.py --input-parquet data/clean.parquet --out-dir index
 
 # 4. Evaluation
-python evaluate.py --queries "kredi,araç,takım" --index-dir index --out_dir eval
+python evaluate.py --queries "zaman,araç,takım" --index-dir index --out_dir eval
 ```

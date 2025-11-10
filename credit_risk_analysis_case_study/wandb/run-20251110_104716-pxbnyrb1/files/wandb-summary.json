@@ -1,0 +1,1 @@
+{"_step":0,"best_cv_score":0.5177202653684614,"_wandb":{"runtime":0},"_runtime":0,"best_params":{"classifier__n_neighbors":20,"classifier__metric":"euclidean"},"n_cv_splits":5,"_timestamp":1.7627608388295677e+09}

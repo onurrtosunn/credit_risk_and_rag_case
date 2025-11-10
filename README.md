@@ -93,7 +93,7 @@ jupyter notebook main.ipynb
 cd rag_case_study
 python ingest_clean.py --input musteriyorumlari.xlsx --out-dir data
 python build_index.py --input-parquet data/clean.parquet --out-dir index
-python query_rag.py --query "kredi" --index-dir index --limit 1000
+python query_rag.py --query "zaman" --index-dir index --limit 1000
 ```
 
 **Details**: [README](./rag_case_study/README.md)

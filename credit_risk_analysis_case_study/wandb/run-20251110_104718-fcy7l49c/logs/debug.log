@@ -1,0 +1,22 @@
+2025-11-10 10:47:18,845 INFO    MainThread:181149 [wandb_init.py:setup_run_log_directory():706] Logging user logs to /home/onur/credit_risk_and_rag_case/credit_risk_analysis_case_study/wandb/run-20251110_104718-fcy7l49c/logs/debug.log
+2025-11-10 10:47:18,845 INFO    MainThread:181149 [wandb_init.py:setup_run_log_directory():707] Logging internal logs to /home/onur/credit_risk_and_rag_case/credit_risk_analysis_case_study/wandb/run-20251110_104718-fcy7l49c/logs/debug-internal.log
+2025-11-10 10:47:18,845 INFO    MainThread:181149 [wandb_init.py:init():833] calling init triggers
+2025-11-10 10:47:18,845 INFO    MainThread:181149 [wandb_init.py:init():838] wandb.init called with sweep_config: {}
+config: {'model_name': 'random_forest', 'n_samples': 12000, 'n_features': 7, 'class_distribution': {'default': 360, 'non_default': 11640}, 'param_grid': {'classifier__n_estimators': [100, 200, 300], 'classifier__max_depth': [10, 20, 30, None], 'classifier__min_samples_split': [2, 5, 10], 'classifier__min_samples_leaf': [1, 2, 4]}, '_wandb': {}}
+2025-11-10 10:47:20,477 INFO    MainThread:181149 [wandb_init.py:init():881] starting backend
+2025-11-10 10:47:20,477 INFO    MainThread:181149 [wandb_init.py:init():884] sending inform_init request
+2025-11-10 10:47:20,478 INFO    MainThread:181149 [wandb_init.py:init():892] backend started and connected
+2025-11-10 10:47:20,480 INFO    MainThread:181149 [wandb_run.py:_label_probe_notebook():1328] probe notebook
+2025-11-10 10:47:20,487 INFO    MainThread:181149 [wandb_init.py:init():962] updated telemetry
+2025-11-10 10:47:20,492 INFO    MainThread:181149 [wandb_init.py:init():986] communicating run to backend with 90.0 second timeout
+2025-11-10 10:47:21,124 INFO    MainThread:181149 [wandb_init.py:init():1033] starting run threads in backend
+2025-11-10 10:47:21,239 INFO    MainThread:181149 [wandb_run.py:_console_start():2506] atexit reg
+2025-11-10 10:47:21,240 INFO    MainThread:181149 [wandb_run.py:_redirect():2354] redirect: wrap_raw
+2025-11-10 10:47:21,240 INFO    MainThread:181149 [wandb_run.py:_redirect():2423] Wrapping output streams.
+2025-11-10 10:47:21,240 INFO    MainThread:181149 [wandb_run.py:_redirect():2446] Redirects installed.
+2025-11-10 10:47:21,241 INFO    MainThread:181149 [wandb_init.py:init():1073] run started, returning control to user process
+2025-11-10 10:52:34,635 INFO    MainThread:181149 [wandb_run.py:_finish():2272] finishing run onurtosun/credit-risk-analysis/fcy7l49c
+2025-11-10 10:52:34,635 INFO    MainThread:181149 [wandb_run.py:_atexit_cleanup():2471] got exitcode: 0
+2025-11-10 10:52:34,635 INFO    MainThread:181149 [wandb_run.py:_restore():2453] restore
+2025-11-10 10:52:34,636 INFO    MainThread:181149 [wandb_run.py:_restore():2459] restore done
+2025-11-10 10:52:35,999 INFO    MainThread:181149 [wandb_run.py:_footer_sync_info():3835] logging synced files

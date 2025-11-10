@@ -1,0 +1,1 @@
+{"best_params":{"classifier__max_depth":10,"classifier__min_samples_leaf":1,"classifier__min_samples_split":5,"classifier__n_estimators":100},"n_cv_splits":5,"_timestamp":1.7627611546277697e+09,"_step":0,"_wandb":{"runtime":313},"_runtime":313,"best_cv_score":0.5147462056128294}

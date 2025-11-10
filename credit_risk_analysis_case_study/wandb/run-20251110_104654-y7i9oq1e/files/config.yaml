@@ -1,0 +1,80 @@
+_wandb:
+    value:
+        cli_version: 0.22.3
+        e:
+            v6k4c1o39r8kwyfwv0zjxmau37pt4xyi:
+                codePath: /home/onur/credit_risk_and_rag_case/credit_risk_analysis_case_study/main.ipynb
+                codePathLocal: main.ipynb
+                cpu_count: 14
+                cpu_count_logical: 20
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "493935394816"
+                        used: "258345582592"
+                email: onurtosunn0@gmail.com
+                executable: /home/onur/miniconda3/bin/python
+                git:
+                    commit: aab103bb6778f1176a81105bb746dc9b3e1cd156
+                    remote: https://github.com/onurrtosunn/credit_risk_and_rag_case.git
+                gpu: NVIDIA GeForce RTX 3060 Laptop GPU
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 3840
+                      memoryTotal: "6442450944"
+                      name: NVIDIA GeForce RTX 3060 Laptop GPU
+                      uuid: GPU-043e4fb2-bcba-96fc-c901-a2dc5b4ac391
+                host: onur
+                memory:
+                    total: "16455970816"
+                os: Linux-6.14.0-34-generic-x86_64-with-glibc2.39
+                program: /home/onur/credit_risk_and_rag_case/credit_risk_analysis_case_study/main.ipynb
+                python: CPython 3.12.9
+                root: /home/onur/credit_risk_and_rag_case/credit_risk_analysis_case_study
+                startedAt: "2025-11-10T07:46:54.314191Z"
+                writerId: v6k4c1o39r8kwyfwv0zjxmau37pt4xyi
+        m: []
+        python_version: 3.12.9
+        t:
+            "1":
+                - 5
+                - 6
+                - 53
+                - 105
+            "2":
+                - 5
+                - 6
+                - 53
+                - 105
+            "3":
+                - 2
+                - 13
+                - 16
+            "4": 3.12.9
+            "5": 0.22.3
+            "8":
+                - 1
+            "12": 0.22.3
+            "13": linux-x86_64
+class_distribution:
+    value:
+        default: 360
+        non_default: 11640
+model_name:
+    value: logistic_regression
+n_features:
+    value: 7
+n_samples:
+    value: 12000
+param_grid:
+    value:
+        classifier__C:
+            - 0.1
+            - 1
+            - 10
+        classifier__penalty:
+            - l1
+            - l2
+        classifier__solver:
+            - liblinear

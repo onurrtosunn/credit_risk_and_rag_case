@@ -34,6 +34,13 @@ from imblearn.pipeline import Pipeline as ImbPipeline
 import config
 import feature_engineering
 
+# Optional: WandB for experiment tracking
+try:
+    import wandb
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
+
 warnings.filterwarnings('ignore')
 
 
@@ -154,13 +161,48 @@ def train_model(
     model_name: str,
     X_train: pd.DataFrame,
     y_train: pd.Series,
-    config_module=None
+    config_module=None,
+    use_wandb: bool = True,
+    wandb_project: str = "credit-risk-analysis",
+    wandb_run_name: Optional[str] = None
 ) -> Tuple[Pipeline, Dict]:
     """
     Train a single model with GridSearchCV.
+    
+    Args:
+        model_name: Name of the model to train
+        X_train: Training features
+        y_train: Training target
+        config_module: Configuration module (default: config)
+        use_wandb: Whether to log to WandB (default: False)
+        wandb_project: WandB project name
+        wandb_run_name: WandB run name (default: model_name with timestamp)
     """
     if config_module is None:
         config_module = config
+    
+    # Initialize WandB if requested
+    if use_wandb and WANDB_AVAILABLE:
+        if wandb_run_name is None:
+            wandb_run_name = f"{model_name}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+        wandb.init(
+            project=wandb_project,
+            name=wandb_run_name,
+            config={
+                "model_name": model_name,
+                "n_samples": len(X_train),
+                "n_features": X_train.shape[1],
+                "class_distribution": {
+                    "default": int(y_train.sum()),
+                    "non_default": int((y_train == 0).sum())
+                },
+                "param_grid": config_module.MODEL_PARAM_GRIDS.get(model_name, {})
+            }
+        )
+        print(f"✓ WandB initialized: {wandb_project}/{wandb_run_name}")
+    elif use_wandb and not WANDB_AVAILABLE:
+        print("⚠ WandB requested but not available. Install with: pip install wandb")
+        use_wandb = False
     
     print("=" * 80)
     print(f"TRAINING MODEL: {model_name.upper()}")
@@ -263,6 +305,15 @@ def train_model(
     print(f"\nBest parameters: {grid_search.best_params_}")
     print(f"Best CV score (ROC-AUC): {grid_search.best_score_:.4f}")
     
+    # Log to WandB
+    if use_wandb and WANDB_AVAILABLE:
+        wandb.log({
+            "best_cv_score": grid_search.best_score_,
+            "best_params": grid_search.best_params_,
+            "n_cv_splits": config_module.CROSS_VALIDATION['n_splits']
+        })
+        print("✓ Results logged to WandB")
+    
     return best_model, training_info
 
 
@@ -270,10 +321,20 @@ def train_all_models(
     X_train: pd.DataFrame,
     y_train: pd.Series,
     config_module=None,
-    models_to_train: Optional[list] = None
+    models_to_train: Optional[list] = None,
+    use_wandb: bool = True,
+    wandb_project: str = "credit-risk-analysis"
 ) -> Dict[str, Tuple[Pipeline, Dict]]:
     """
     Train all models.
+    
+    Args:
+        X_train: Training features
+        y_train: Training target
+        config_module: Configuration module (default: config)
+        models_to_train: List of models to train (default: all models)
+        use_wandb: Whether to log to WandB (default: False)
+        wandb_project: WandB project name
     """
     if config_module is None:
         config_module = config
@@ -291,11 +352,30 @@ def train_all_models(
     
     for model_name in models_to_train:
         try:
-            best_model, training_info = train_model(model_name, X_train, y_train, config_module)
+            best_model, training_info = train_model(
+                model_name, X_train, y_train, config_module,
+                use_wandb=use_wandb,
+                wandb_project=wandb_project,
+                wandb_run_name=f"{model_name}_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+            )
             trained_models[model_name] = (best_model, training_info)
         except Exception as e:
             print(f"\n✗ Error training {model_name}: {str(e)}")
+            if use_wandb and WANDB_AVAILABLE:
+                wandb.log({"error": str(e), "model": model_name})
             continue
+    
+    # Log comparison of all models to WandB
+    if use_wandb and WANDB_AVAILABLE and trained_models:
+        comparison_data = []
+        for model_name, (model, info) in trained_models.items():
+            comparison_data.append({
+                "model": model_name,
+                "cv_score": info['best_cv_score']
+            })
+        comparison_df = pd.DataFrame(comparison_data)
+        wandb.log({"model_comparison": wandb.Table(dataframe=comparison_df)})
+        print("✓ Model comparison logged to WandB")
     
     return trained_models
 
@@ -343,10 +423,21 @@ def evaluate_model_cv(
     X: pd.DataFrame,
     y: pd.Series,
     config_module=None,
-    cv: Optional[int] = None
+    cv: Optional[int] = None,
+    use_wandb: bool = False,
+    model_name: str = "Model"
 ) -> Dict:
     """
     Evaluate a model using cross-validation with multiple metrics.
+    
+    Args:
+        model: Trained model pipeline
+        X: Features
+        y: Target
+        config_module: Configuration module (default: config)
+        cv: Cross-validation strategy (default: StratifiedKFold)
+        use_wandb: Whether to log to WandB (default: False)
+        model_name: Name of the model for logging
     """
     if config_module is None:
         config_module = config
@@ -385,6 +476,15 @@ def evaluate_model_cv(
             'std': np.std(scores),
             'scores': scores
         }
+    
+    # Log to WandB
+    if use_wandb and WANDB_AVAILABLE:
+        wandb_metrics = {}
+        for metric, values in cv_summary.items():
+            wandb_metrics[f"cv_{metric}_mean"] = values['mean']
+            wandb_metrics[f"cv_{metric}_std"] = values['std']
+        wandb.log(wandb_metrics)
+        print(f"✓ CV results logged to WandB for {model_name}")
     
     return {
         'cv_summary': cv_summary,

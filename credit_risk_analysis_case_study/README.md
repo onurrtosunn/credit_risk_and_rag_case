@@ -40,6 +40,49 @@ pip install -r requirements.txt
 
 Place the data file at `data/credit_risk_case.xlsx`.
 
+### Docker Setup (Optional)
+
+The project includes Docker support for easy environment setup and reproducibility.
+
+#### Using Docker Compose (Recommended)
+
+```bash
+# Build and start the container
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the container
+docker-compose down
+```
+
+The Jupyter notebook will be available at `http://localhost:8888`.
+
+#### Using Docker directly
+
+```bash
+# Build the image
+docker build -t credit-risk-analysis .
+
+# Run the container
+docker run -p 8888:8888 -v $(pwd):/app credit-risk-analysis
+```
+
+### WandB Setup (Optional)
+
+For experiment tracking with Weights & Biases:
+
+```bash
+# Install WandB
+pip install wandb
+
+# Login to WandB
+wandb login
+```
+
+WandB integration is optional. If not installed, the code will continue to work without logging.
+
 ## Quick Start
 
 1. Open and run `main.ipynb` notebook:
@@ -105,6 +148,30 @@ For each model:
 - Finding best hyperparameters with GridSearchCV
 - Saving trained models
 
+#### 4.1 WandB Integration
+
+The training module supports experiment tracking with Weights & Biases (WandB). To enable WandB logging:
+
+```python
+from train import train_all_models
+
+# Train all models with WandB logging
+trained_models = train_all_models(
+    X_train=X_train,
+    y_train=y_train,
+    use_wandb=True,  # Enable WandB logging
+    wandb_project="credit-risk-analysis"  # Your WandB project name
+)
+```
+
+WandB will automatically log:
+- Model hyperparameters
+- Cross-validation scores
+- Best parameters found
+- Model comparison metrics
+
+View your experiments at [wandb.ai](https://wandb.ai).
+
 ### 5. Model Evaluation
 
 By evaluating trained models on test set:
@@ -164,3 +231,40 @@ Generated artifacts:
 - Feature importance analysis performed to identify key drivers of default prediction across different model architectures
 - Comparative model evaluation and selection recommendations provided based on performance metrics
 - Detailed results exported to CSV files for further analysis and documentation
+
+## Additional Features
+
+### Experiment Tracking with WandB
+
+The project includes optional integration with Weights & Biases for experiment tracking. This allows you to:
+- Track model training metrics across different experiments
+- Compare model performances visually
+- Log hyperparameters and configurations
+- Share results with team members
+
+To use WandB:
+1. Install: `pip install wandb`
+2. Login: `wandb login`
+3. Enable in training: Set `use_wandb=True` in `train_model()` or `train_all_models()`
+
+### Docker Support
+
+The project includes Docker configuration for:
+- Consistent development environment
+- Easy deployment and sharing
+- Reproducible experiments
+- Isolation from host system dependencies
+
+Use `docker-compose up` to start a Jupyter notebook environment with all dependencies pre-installed.
+
+## Troubleshooting
+
+### WandB Issues
+- If WandB is not installed, the code will continue to work without logging
+- Make sure you're logged in: `wandb login`
+- Check your internet connection for WandB cloud sync
+
+### Docker Issues
+- Ensure Docker and Docker Compose are installed
+- Check port 8888 is not already in use
+- For permission issues, ensure Docker has proper access to the project directory

@@ -8,4 +8,4 @@ category-encoders
 imbalanced-learn
 openpyxl
 jupyter
-
+wandb
